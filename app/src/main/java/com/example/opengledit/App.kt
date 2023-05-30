@@ -1,4 +1,4 @@
-package com.example.opengl
+package com.example.opengledit
 
 import android.app.Application
 

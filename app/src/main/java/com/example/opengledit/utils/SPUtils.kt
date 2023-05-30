@@ -2,7 +2,7 @@ package com.example.opengledit.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.opengl.yxApp
+import com.example.opengledit.yxApp
 import java.util.Collections
 
 

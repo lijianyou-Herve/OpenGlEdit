@@ -2,9 +2,12 @@ package com.example.opengledit.base
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Bundle
+import android.os.PersistableBundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import com.example.opengledit.utils.XXPermissionsHelper
 import com.zlylib.fileselectorlib.FileSelector
 import com.zlylib.fileselectorlib.utils.Const
 import java.util.ArrayList
@@ -12,6 +15,11 @@ import java.util.ArrayList
 open class BaseActivity : AppCompatActivity() {
 
     val FILE_REQUEST_CODE = 1
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        requestPermissions()
+    }
 
     fun openFile() {
 
@@ -32,6 +40,10 @@ open class BaseActivity : AppCompatActivity() {
 
     open fun onFileCallback(fileList: ArrayList<String>) {
 
+    }
+
+    private fun requestPermissions() {
+        XXPermissionsHelper.requestPermissions(this)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
