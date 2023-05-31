@@ -1,13 +1,22 @@
-package com.example.opengledit.opengl.render
+package com.example.opengledit.opengl
 
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
-import com.example.opengledit.opengl.OpenGLTools
 import com.example.opengledit.opengl.drawer.IDrawer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-class SimpleRender : GLSurfaceView.Renderer {
+
+/**
+ * 简单的OpenGL渲染器
+ *
+ * @author Chen Xiaoping (562818444@qq.com)
+ * @since LearningVideo
+ * @version LearningVideo
+ * @Datetime 2019-19-09 08:55
+ *
+ */
+class SimpleRender: GLSurfaceView.Renderer {
 
     private val drawers = mutableListOf<IDrawer>()
 
