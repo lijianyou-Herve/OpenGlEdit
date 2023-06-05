@@ -10,6 +10,7 @@ import com.example.opengledit.yxApp
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import kotlin.math.min
 
 
 /**
@@ -29,55 +30,19 @@ class Lattice4VideoDrawer : IDrawer {
     private val mVertexCoors = floatArrayOf(
         // 第一个视频片段
         -1.0f, 1.0f,
-        -0.0f, 1.0f,
-        -1.0f, 0.0f,
-        -0.0f, 0.0f,
-
-        // 第二个视频片段
-        -1.0f, 1.0f,
-        -0.0f, 1.0f,
-        -1.0f, 0.0f,
-        -0.0f, 0.0f,
-
-        // 第三个视频片段
-        -1.0f, 0.5f,
-        -0.5f, 0.5f,
-        -1.0f, 0.0f,
-        -0.5f, 0.0f,
-
-        // 第四个视频片段
-        -0.5f, 0.5f,
-        0.0f, 0.5f,
-        -0.5f, 0.0f,
-        0.0f, 0.0f
+        1.0f, 1.0f,
+        -1.0f, -1.0f,
+        1.0f, -1.0f,
     )
 
 
     // opengl纹理坐标，四宫格
     private val mTextureCoors = floatArrayOf(
         // 第一个视频片段
-        0.0f, 0f,
-        1f, 0.0f,
-        0.0f, 1f,
-        1f, 1f,
-
-        // 第二个视频片段
-        0.0f, 0f,
-        1f, 0.0f,
-        0.0f, 1f,
-        1f, 1f,
-
-        // 第三个视频片段
         0.0f, 0.0f,
-        0.5f, 0.0f,
-        0.0f, -0.5f,
-        0.5f, -0.5f,
-
-        // 第四个视频片段
-        0.5f, 0.0f,
         1.0f, 0.0f,
-        0.5f, -0.5f,
-        1.0f, -0.5f
+        0.0f, 1.0f,
+        1.0f, 1.0f,
     )
 
 
@@ -110,12 +75,16 @@ class Lattice4VideoDrawer : IDrawer {
     // 半透值接收者
     private var mAlphaHandler: Int = -1
 
+    //下标接收器
+//    private var mIndexHandler: Int = -1
+
     private lateinit var mVertexBuffer: FloatBuffer
     private lateinit var mTextureBuffer: FloatBuffer
 
     private var mMatrix: FloatArray? = null
 
     private var mAlpha = 1f
+//    private var mIndex = 0f
 
     init {
         //【步骤1: 初始化顶点坐标】
@@ -215,6 +184,13 @@ class Lattice4VideoDrawer : IDrawer {
         mAlpha = alpha
     }
 
+
+    fun setIndex(index: Int) {
+        val formatted = String.format("%.1f", index.toFloat())
+//        mIndex = formatted.toFloat()
+//        Log.i(TAG, "setIndex: mIndex = "+mIndex)
+    }
+
     override fun setTextureID(id: Int) {
         mTextureId = id
         mSurfaceTexture = SurfaceTexture(id)
@@ -268,6 +244,7 @@ class Lattice4VideoDrawer : IDrawer {
             mTextureHandler = GLES20.glGetUniformLocation(mProgram, "uTexture")
             mTexturePosHandler = GLES20.glGetAttribLocation(mProgram, "aCoordinate")
             mAlphaHandler = GLES20.glGetAttribLocation(mProgram, "alpha")
+//            mIndexHandler = GLES20.glGetAttribLocation(mProgram, "index")
         }
         //使用OpenGL程序
         GLES20.glUseProgram(mProgram)
@@ -278,13 +255,26 @@ class Lattice4VideoDrawer : IDrawer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         //绑定纹理ID到纹理单元
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTextureId)
+
         //将激活的纹理单元传递到着色器里面
         GLES20.glUniform1i(mTextureHandler, 0)
         //配置边缘过渡参数
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR.toFloat())
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR.toFloat())
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+//        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR.toFloat())
+//        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR.toFloat())
+//        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT)
+//        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT)
+
+        //环绕（超出纹理坐标范围）  （s==x t==y GL_REPEAT 重复）
+
+        //环绕（超出纹理坐标范围）  （s==x t==y GL_REPEAT 重复）
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_MIRRORED_REPEAT)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_MIRRORED_REPEAT)
+        //过滤（纹理像素映射到坐标点）  （缩小、放大：GL_LINEAR线性）
+        //过滤（纹理像素映射到坐标点）  （缩小、放大：GL_LINEAR线性）
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+
+
     }
 
     private fun updateTexture() {
@@ -292,6 +282,7 @@ class Lattice4VideoDrawer : IDrawer {
     }
 
     private fun doDraw() {
+
         //启用顶点的句柄
         GLES20.glEnableVertexAttribArray(mVertexPosHandler)
         GLES20.glEnableVertexAttribArray(mTexturePosHandler)
@@ -300,6 +291,7 @@ class Lattice4VideoDrawer : IDrawer {
         GLES20.glVertexAttribPointer(mVertexPosHandler, 2, GLES20.GL_FLOAT, false, 0, mVertexBuffer)
         GLES20.glVertexAttribPointer(mTexturePosHandler, 2, GLES20.GL_FLOAT, false, 0, mTextureBuffer)
         GLES20.glVertexAttrib1f(mAlphaHandler, mAlpha)
+//        GLES20.glVertexAttrib1f(mIndexHandler, mIndex)
         //开始绘制
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
@@ -329,14 +321,14 @@ class Lattice4VideoDrawer : IDrawer {
     private var sy = 1f
 
     fun translate(dx: Float, dy: Float) {
-        this.dx = dx
-        this.dy = dy
+        this.dx += dx
+        this.dy += dy
         doTranslate(dx, dy)
     }
 
     fun scale(sx: Float, sy: Float) {
-        this.sx = sx
-        this.sy = sy
+        this.sx *= sx
+        this.sy *= sy
         doScale(sx, sy)
     }
 
