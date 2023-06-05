@@ -4,6 +4,9 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.Matrix
+import android.util.Log
+import com.example.opengledit.utils.OpenGLESUtils
+import com.example.opengledit.yxApp
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -18,23 +21,65 @@ import java.nio.FloatBuffer
  * @Datetime 2019-10-26 15:45
  *
  */
-class VideoDrawer : IDrawer {
+class Lattice4VideoDrawer : IDrawer {
 
-    // 顶点坐标
+    private val TAG: String = "Lattice4VideoDrawer"
+
+    // opengl顶点坐标，四宫格
     private val mVertexCoors = floatArrayOf(
-        -1f, -1f,
-        1f, -1f,
-        -1f, 1f,
-        1f, 1f
+        // 第一个视频片段
+        -1.0f, 1.0f,
+        -0.0f, 1.0f,
+        -1.0f, 0.0f,
+        -0.0f, 0.0f,
+
+        // 第二个视频片段
+        -1.0f, 1.0f,
+        -0.0f, 1.0f,
+        -1.0f, 0.0f,
+        -0.0f, 0.0f,
+
+        // 第三个视频片段
+        -1.0f, 0.5f,
+        -0.5f, 0.5f,
+        -1.0f, 0.0f,
+        -0.5f, 0.0f,
+
+        // 第四个视频片段
+        -0.5f, 0.5f,
+        0.0f, 0.5f,
+        -0.5f, 0.0f,
+        0.0f, 0.0f
     )
 
-    // 纹理坐标
+
+    // opengl纹理坐标，四宫格
     private val mTextureCoors = floatArrayOf(
-        0f, 1f,
+        // 第一个视频片段
+        0.0f, 0f,
+        1f, 0.0f,
+        0.0f, 1f,
         1f, 1f,
-        0f, 0f,
-        1f, 0f
+
+        // 第二个视频片段
+        0.0f, 0f,
+        1f, 0.0f,
+        0.0f, 1f,
+        1f, 1f,
+
+        // 第三个视频片段
+        0.0f, 0.0f,
+        0.5f, 0.0f,
+        0.0f, -0.5f,
+        0.5f, -0.5f,
+
+        // 第四个视频片段
+        0.5f, 0.0f,
+        1.0f, 0.0f,
+        0.5f, -0.5f,
+        1.0f, -0.5f
     )
+
 
     private var mWorldWidth: Int = -1
     private var mWorldHeight: Int = -1
@@ -196,8 +241,18 @@ class VideoDrawer : IDrawer {
 
     private fun createGLPrg() {
         if (mProgram == -1) {
-            val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, getVertexShader())
-            val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, getFragmentShader())
+            val vertexFilename = "render/four_part/vertex.frag"
+            val fragFilename = "render/four_part/frag.frag"
+
+            val vertexShaderCode: String = OpenGLESUtils.getShaderCode(yxApp, vertexFilename)
+            val fragShaderCode: String = OpenGLESUtils.getShaderCode(yxApp, fragFilename)
+
+            Log.i(TAG, "createGLPrg: vertexShaderCode = $vertexShaderCode")
+            Log.i(TAG, "createGLPrg: fragShaderCode = $fragShaderCode")
+
+
+            val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+            val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragShaderCode)
 
             //创建OpenGL ES程序，注意：需要在OpenGL渲染线程中创建，否则无法渲染
             mProgram = GLES20.glCreateProgram()
@@ -257,34 +312,6 @@ class VideoDrawer : IDrawer {
         GLES20.glDeleteProgram(mProgram)
     }
 
-    private fun getVertexShader(): String {
-        return "attribute vec4 aPosition;" +
-                "precision mediump float;" +
-                "uniform mat4 uMatrix;" +
-                "attribute vec2 aCoordinate;" +
-                "varying vec2 vCoordinate;" +
-                "attribute float alpha;" +
-                "varying float inAlpha;" +
-                "void main() {" +
-                "    gl_Position = uMatrix*aPosition;" +
-                "    vCoordinate = aCoordinate;" +
-                "    inAlpha = alpha;" +
-                "}"
-    }
-
-    private fun getFragmentShader(): String {
-        //一定要加换行"\n"，否则会和下一行的precision混在一起，导致编译出错
-        return "#extension GL_OES_EGL_image_external : require\n" +
-                "precision mediump float;" +
-                "varying vec2 vCoordinate;" +
-                "varying float inAlpha;" +
-                "uniform samplerExternalOES uTexture;" +
-                "void main() {" +
-                "  vec4 color = texture2D(uTexture, vCoordinate);" +
-                "  gl_FragColor = vec4(color.r, color.g, color.b, inAlpha);" +
-                "}"
-    }
-
     private fun loadShader(type: Int, shaderCode: String): Int {
         //根据type创建顶点着色器或者片元着色器
         val shader = GLES20.glCreateShader(type)
@@ -304,18 +331,18 @@ class VideoDrawer : IDrawer {
     fun translate(dx: Float, dy: Float) {
         this.dx = dx
         this.dy = dy
-        doTranslate(dx,dy)
+        doTranslate(dx, dy)
     }
 
     fun scale(sx: Float, sy: Float) {
         this.sx = sx
         this.sy = sy
-        doScale(sx,sy)
+        doScale(sx, sy)
     }
 
-    private fun doMatrix(){
-        doTranslate(dx,dy)
-        doScale(sx,sy)
+    private fun doMatrix() {
+        doTranslate(dx, dy)
+        doScale(sx, sy)
     }
 
     private fun doTranslate(dx: Float, dy: Float) {

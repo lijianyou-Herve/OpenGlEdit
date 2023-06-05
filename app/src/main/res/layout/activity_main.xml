@@ -15,10 +15,11 @@
         tools:context=".MainActivity">
 
 
-        <SurfaceView
+        <com.example.opengledit.opengl.TouchSurfaceView
             android:id="@+id/gl_surface"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            app:layout_constraintDimensionRatio="16:9"
             app:layout_constraintBottom_toTopOf="@id/llVideo"
             app:layout_constraintTop_toTopOf="parent" />
 

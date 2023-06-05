@@ -22,7 +22,7 @@ import java.lang.ref.WeakReference
  */
 class CustomerGLRenderer : SurfaceHolder.Callback {
 
-    private val mThread = RenderThread()
+    private var mThread = RenderThread()
 
     private var mSurfaceView: WeakReference<SurfaceView>? = null
 
@@ -34,23 +34,40 @@ class CustomerGLRenderer : SurfaceHolder.Callback {
         mThread.start()
     }
 
+    private val mOnAttachStateChangeListener = object : View.OnAttachStateChangeListener {
+
+        override fun onViewAttachedToWindow(v: View) {
+        }
+
+        override fun onViewDetachedFromWindow(v: View) {
+            stop()
+        }
+    }
+
     fun setSurface(surface: SurfaceView) {
         mSurfaceView = WeakReference(surface)
         surface.holder.addCallback(this)
 
-        surface.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener{
+        surface.addOnAttachStateChangeListener(mOnAttachStateChangeListener)
+    }
 
-            override fun onViewAttachedToWindow(v: View) {
-            }
+    fun removeSurface(surface: SurfaceView) {
+//        mSurfaceView = null
+//        surface.holder.removeCallback(this)
+//        surface.removeOnAttachStateChangeListener(mOnAttachStateChangeListener)
 
-            override fun onViewDetachedFromWindow(v: View) {
-                stop()
-            }
-        })
     }
 
     fun setSurface(surface: Surface, width: Int, height: Int) {
+
+        stop()
+        mThread.onSurfaceDestroy()
+
         mSurface = surface
+
+        mThread = RenderThread()
+        mThread.start()
+
         mThread.onSurfaceCreate()
         mThread.onSurfaceChange(width, height)
     }
@@ -63,6 +80,9 @@ class CustomerGLRenderer : SurfaceHolder.Callback {
         mThread.notifySwap(timeUs)
     }
 
+    fun clearDrawer() {
+        mDrawers.clear()
+    }
     fun addDrawer(drawer: IDrawer) {
         mDrawers.add(drawer)
     }
@@ -85,7 +105,7 @@ class CustomerGLRenderer : SurfaceHolder.Callback {
         mThread.onSurfaceDestroy()
     }
 
-    inner class RenderThread: Thread() {
+    inner class RenderThread : Thread() {
 
         // 渲染状态
         private var mState = RenderState.NO_SURFACE
@@ -162,26 +182,31 @@ class CustomerGLRenderer : SurfaceHolder.Callback {
                         createEGLSurfaceFirst()
                         holdOn()
                     }
+
                     RenderState.SURFACE_CHANGE -> {
                         createEGLSurfaceFirst()
                         GLES20.glViewport(0, 0, mWidth, mHeight)
                         configWordSize()
                         mState = RenderState.RENDERING
                     }
+
                     RenderState.RENDERING -> {
                         render()
                         if (mRenderMode == RenderMode.RENDER_WHEN_DIRTY) {
                             holdOn()
                         }
                     }
+
                     RenderState.SURFACE_DESTROY -> {
                         destroyEGLSurface()
                         mState = RenderState.NO_SURFACE
                     }
+
                     RenderState.STOP -> {
                         releaseEGL()
                         return
                     }
+
                     else -> {
                         holdOn()
                     }

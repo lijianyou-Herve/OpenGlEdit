@@ -92,12 +92,16 @@ class MMuxer {
 
     fun writeVideoData(byteBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo) {
         if (mIsStart) {
+
+            Log.i(TAG, "writeVideoData:时间点 =  "+( bufferInfo.presentationTimeUs/1000/1000))
+
             mMediaMuxer?.writeSampleData(mVideoTrackIndex, byteBuffer, bufferInfo)
         }
     }
 
     fun writeAudioData(byteBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo) {
         if (mIsStart) {
+            Log.i(TAG, "writeAudioData:时间点 =  "+( bufferInfo.presentationTimeUs/1000/1000))
             mMediaMuxer?.writeSampleData(mAudioTrackIndex, byteBuffer, bufferInfo)
         }
     }

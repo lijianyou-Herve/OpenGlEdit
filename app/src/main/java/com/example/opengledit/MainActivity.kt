@@ -1,8 +1,11 @@
 package com.example.opengledit
 
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.Surface
+import android.view.View
+import android.widget.Toast
 import com.example.opengledit.base.BaseActivity
 import com.example.opengledit.databinding.ActivityMainBinding
 import com.example.opengledit.media.BaseDecoder
@@ -17,6 +20,8 @@ import com.example.opengledit.media.encoder.BaseEncoder
 import com.example.opengledit.media.encoder.DefEncodeStateListener
 import com.example.opengledit.media.encoder.VideoEncoder
 import com.example.opengledit.media.muxer.MMuxer
+import com.example.opengledit.opengl.drawer.FourPartFilter
+import com.example.opengledit.opengl.drawer.Lattice4VideoDrawer
 import com.example.opengledit.opengl.drawer.SoulVideoDrawer
 import com.example.opengledit.opengl.drawer.VideoDrawer
 import com.example.opengledit.opengl.egl.CustomerGLRenderer
@@ -34,7 +39,8 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
     private var audioDecoder: IDecoder? = null
     private var videoDecoder: IDecoder? = null
 
-    private var path: String = ""
+    private var path1: String = ""
+    private var path2: String = ""
 
     private val threadPool = Executors.newFixedThreadPool(10)
 
@@ -49,6 +55,7 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        muxer.setStateListener(this)
 
         binding.video1.setText(SPUtils.get().getString("video1"))
         binding.video2.setText(SPUtils.get().getString("video2"))
@@ -64,41 +71,46 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         }
 
         binding.start.setOnClickListener {
-
-            val video1 = binding.video1.text.toString()
-            val file = File(video1)
-            if (file.exists()) {
-                path = video1
-                initVideo()
-                initAudio()
-//                setRenderSurface()
-
-                initAudioEncoder()
-                initVideoEncoder()
-            }
-
+            val old = renderer
+            renderer = CustomerGLRenderer()
+            old.stop()
+            addVideos()
+            initAudio()
+            onStartClick()
         }
 
+        path1 = binding.video1.text.toString()
+        path2 = binding.video2.text.toString()
+        val file = File(path1)
+        if (file.exists()) {
 
-    }
-
-    private fun setRenderSurface() {
-        renderer.setSurface(binding.glSurface)
-    }
-
-    private fun addVideo(path: String) {
-        val drawer = VideoDrawer() // SoulVideoDrawer()
-//        val drawer = SoulVideoDrawer() // SoulVideoDrawer()
-        drawer.setVideoSize(1920, 1080)
-        drawer.getSurfaceTexture {
-            initVideoDecoder(path, Surface(it))
+            addVideos()
+            initAudio()
+            setRenderSurface()
         }
-        renderer.addDrawer(drawer)
-
-//        binding.glSurface.setEGLContextClientVersion(2)
-//        binding.glSurface.setRenderer(mRender)
     }
 
+
+    private fun addVideos() {
+        initVideo(path1, 0)
+//        initVideo(path2, 1)
+//            initVideo(path2, 2)
+//            initVideo(path2, 3)
+    }
+
+
+    private var startTime = 0L
+
+    fun onStartClick() {
+        startTime = System.currentTimeMillis() / 1000
+        Toast.makeText(this, "正在编码", Toast.LENGTH_LONG).show()
+
+        audioDecoder?.withoutSync()
+        videoDecoder?.withoutSync()
+
+        initAudioEncoder()
+        initVideoEncoder()
+    }
 
     private fun initVideoEncoder() {
         // 视频编码器
@@ -108,7 +120,6 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         renderer.setSurface(videoEncoder!!.getEncodeSurface()!!, 1920, 1080)
 
         videoEncoder!!.setStateListener(object : DefEncodeStateListener {
-
             override fun encoderFinish(encoder: BaseEncoder) {
                 renderer.stop()
             }
@@ -123,38 +134,39 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         threadPool.execute(audioEncoder)
     }
 
-    private fun initVideo() {
+    private fun initVideo(path: String, index: Int) {
 //        val drawer = VideoDrawer() // SoulVideoDrawer()
-        val drawer = SoulVideoDrawer() // SoulVideoDrawer()
+//        val drawer = SoulVideoDrawer() // SoulVideoDrawer()
+        val drawer = Lattice4VideoDrawer() // SoulVideoDrawer()
+//        val drawer = FourPartFilter(yxApp) // SoulVideoDrawer()
         drawer.setVideoSize(1920, 1080)
         drawer.getSurfaceTexture {
             initVideoDecoder(path, Surface(it))
-//            initPlayer(path, Surface(it))
-
         }
+
+        val sx = 0.5f
+        val sy = 0.5f
+        val dx = -0.25f + 0.5f * (index % 2)
+        val dy = -0.25f + 0.5f * (index / 2)
+
+//        drawer.scale(sx, sy)
+//        drawer.translate(dx, dy)
+
         renderer.addDrawer(drawer)
-    }
+//        binding.glSurface.addDrawer(drawer)
 
-    private fun initPlayer(path: String, sf: Surface) {
-        val videoDecoder = VideoDecoder(path, null, sf)
-        threadPool.execute(videoDecoder)
-        videoDecoder.goOn()
-        videoDecoder.setStateListener(object : DefDecoderStateListener {
-            override fun decodeOneFrame(decodeJob: BaseDecoder?, frame: Frame) {
-                renderer.notifySwap(frame.bufferInfo.presentationTimeUs)
-            }
-        })
 
-//        if (withSound) {
-//            val audioDecoder = AudioDecoder(path)
-//            threadPool.execute(audioDecoder)
-//            audioDecoder.goOn()
-//        }
+//        val dx = 0f
+//        val dy = 0f
+
+//        Handler().postDelayed({
+//            drawer.scale(1f, 1f)
+//        }, 1000)
     }
 
     private fun initVideoDecoder(path: String, sf: Surface) {
-        videoDecoder?.stop()
-        videoDecoder = VideoDecoder(path, null, sf).withoutSync()
+        val videoDecoder = VideoDecoder(path, null, sf)
+//            .withoutSync()
         videoDecoder!!.setStateListener(object : DefDecodeStateListener {
             override fun decodeOneFrame(decodeJob: BaseDecoder?, frame: Frame) {
                 renderer.notifySwap(frame.bufferInfo.presentationTimeUs)
@@ -162,7 +174,9 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
             }
 
             override fun decoderFinish(decodeJob: BaseDecoder?) {
-                videoEncoder?.endOfStream()
+                if (path == path1) {
+                    videoEncoder?.endOfStream()
+                }
             }
         })
         videoDecoder!!.goOn()
@@ -173,7 +187,8 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
 
     private fun initAudio() {
         audioDecoder?.stop()
-        audioDecoder = AudioDecoder(path).withoutSync()
+        audioDecoder = AudioDecoder(path1)
+//            .withoutSync()
         audioDecoder!!.setStateListener(object : DefDecodeStateListener {
 
             override fun decodeOneFrame(decodeJob: BaseDecoder?, frame: Frame) {
@@ -192,10 +207,9 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
 
     override fun onMuxerFinish() {
         runOnUiThread {
-//            binding.btn.isEnabled = true
-//            binding.btn.text = "编码完成"
+            Toast.makeText(this, "编码完成", Toast.LENGTH_LONG).show()
 
-            Log.i(TAG, "onMuxerFinish: 编码完成")
+            Log.i(TAG, "onMuxerFinish:总时间 =  ${System.currentTimeMillis() / 1000 - startTime}")
         }
 
         audioDecoder?.stop()
@@ -220,6 +234,10 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
                 binding.video2.text = it;
             }
         }
+    }
+
+    private fun setRenderSurface() {
+        renderer.setSurface(binding.glSurface)
     }
 
 }
