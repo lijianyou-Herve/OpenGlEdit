@@ -76,7 +76,7 @@ class Lattice4VideoDrawer : IDrawer {
     private var mAlphaHandler: Int = -1
 
     //下标接收器
-//    private var mIndexHandler: Int = -1
+    private var mIndexHandler: Int = -1
 
     private lateinit var mVertexBuffer: FloatBuffer
     private lateinit var mTextureBuffer: FloatBuffer
@@ -84,7 +84,7 @@ class Lattice4VideoDrawer : IDrawer {
     private var mMatrix: FloatArray? = null
 
     private var mAlpha = 1f
-//    private var mIndex = 0f
+    private var mIndex = 0f
 
     init {
         //【步骤1: 初始化顶点坐标】
@@ -187,8 +187,8 @@ class Lattice4VideoDrawer : IDrawer {
 
     fun setIndex(index: Int) {
         val formatted = String.format("%.1f", index.toFloat())
-//        mIndex = formatted.toFloat()
-//        Log.i(TAG, "setIndex: mIndex = "+mIndex)
+        mIndex = formatted.toFloat()
+        Log.i(TAG, "setIndex: mIndex = "+mIndex)
     }
 
     override fun setTextureID(id: Int) {
@@ -244,7 +244,7 @@ class Lattice4VideoDrawer : IDrawer {
             mTextureHandler = GLES20.glGetUniformLocation(mProgram, "uTexture")
             mTexturePosHandler = GLES20.glGetAttribLocation(mProgram, "aCoordinate")
             mAlphaHandler = GLES20.glGetAttribLocation(mProgram, "alpha")
-//            mIndexHandler = GLES20.glGetAttribLocation(mProgram, "index")
+            mIndexHandler = GLES20.glGetAttribLocation(mProgram, "index")
         }
         //使用OpenGL程序
         GLES20.glUseProgram(mProgram)
@@ -291,7 +291,7 @@ class Lattice4VideoDrawer : IDrawer {
         GLES20.glVertexAttribPointer(mVertexPosHandler, 2, GLES20.GL_FLOAT, false, 0, mVertexBuffer)
         GLES20.glVertexAttribPointer(mTexturePosHandler, 2, GLES20.GL_FLOAT, false, 0, mTextureBuffer)
         GLES20.glVertexAttrib1f(mAlphaHandler, mAlpha)
-//        GLES20.glVertexAttrib1f(mIndexHandler, mIndex)
+        GLES20.glVertexAttrib1f(mIndexHandler, mIndex)
         //开始绘制
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }

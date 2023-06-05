@@ -92,9 +92,9 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
 
     private fun addVideos() {
         initVideo(path1, 0)
-//        initVideo(path2, 1)
-//        initVideo(path2, 2)
-//        initVideo(path2, 3)
+        initVideo(path2, 1)
+        initVideo(path2, 2)
+        initVideo(path2, 3)
     }
 
 
