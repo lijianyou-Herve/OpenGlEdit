@@ -5,7 +5,10 @@ import android.opengl.GLES11
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.Matrix
+import android.util.Log
 import com.example.opengledit.opengl.OpenGLTools
+import com.example.opengledit.utils.OpenGLESUtils
+import com.example.opengledit.yxApp
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -21,6 +24,8 @@ import java.nio.FloatBuffer
  *
  */
 class SoulVideoDrawer : IDrawer {
+    private val TAG: String = "SoulVideoDrawer"
+
     /**上下颠倒的顶点矩阵*/
     private val mReserveVertexCoors = floatArrayOf(
         -1f, 1f,
@@ -63,16 +68,20 @@ class SoulVideoDrawer : IDrawer {
 
     //矩阵变换接收者
     private var mVertexMatrixHandler: Int = -1
+
     // 顶点坐标接收者
     private var mVertexPosHandler: Int = -1
+
     // 纹理坐标接收者
     private var mTexturePosHandler: Int = -1
+
     // 纹理接收者
     private var mTextureHandler: Int = -1
+
     // 半透值接收者
     private var mAlphaHandler: Int = -1
 
-//-------------灵魂出窍相关的变量--------------
+    //-------------灵魂出窍相关的变量--------------
     // 灵魂帧缓冲
     private var mSoulFrameBuffer: Int = -1
 
@@ -127,7 +136,8 @@ class SoulVideoDrawer : IDrawer {
     private fun initDefMatrix() {
         if (mMatrix != null) return
         if (mVideoWidth != -1 && mVideoHeight != -1 &&
-            mWorldWidth != -1 && mWorldHeight != -1) {
+            mWorldWidth != -1 && mWorldHeight != -1
+        ) {
             mMatrix = FloatArray(16)
             var prjMatrix = FloatArray(16)
             val originRatio = mVideoWidth / mVideoHeight.toFloat()
@@ -227,8 +237,19 @@ class SoulVideoDrawer : IDrawer {
 
     private fun createGLPrg() {
         if (mProgram == -1) {
-            val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, getVertexShader())
-            val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, getFragmentShader())
+
+            val vertexFilename = "render/soul/vertex.frag"
+            val fragFilename = "render/soul/frag.frag"
+
+            val vertexShaderCode: String = OpenGLESUtils.getShaderCode(yxApp, vertexFilename)
+            val fragShaderCode: String = OpenGLESUtils.getShaderCode(yxApp, fragFilename)
+
+            Log.i(TAG, "createGLPrg: vertexShaderCode = $vertexShaderCode")
+            Log.i(TAG, "createGLPrg: fragShaderCode = $fragShaderCode")
+
+
+            val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+            val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragShaderCode)
 
             //创建OpenGL ES程序，注意：需要在OpenGL渲染线程中创建，否则无法渲染
             mProgram = GLES20.glCreateProgram()
@@ -343,7 +364,7 @@ class SoulVideoDrawer : IDrawer {
         GLES20.glEnableVertexAttribArray(mVertexPosHandler)
         GLES20.glEnableVertexAttribArray(mTexturePosHandler)
         GLES20.glUniformMatrix4fv(mVertexMatrixHandler, 1, false, mMatrix, 0)
-        GLES20.glUniform1f(mProgressHandler, (System.currentTimeMillis() - mModifyTime)/500f)
+        GLES20.glUniform1f(mProgressHandler, (System.currentTimeMillis() - mModifyTime) / 500f)
         GLES20.glUniform1i(mDrawFobHandler, mDrawFbo)
         //设置着色器参数， 第二个参数表示一个顶点包含的数据数量，这里为xy，所以为2
         GLES20.glVertexAttribPointer(mVertexPosHandler, 2, GLES20.GL_FLOAT, false, 0, mVertexBuffer)
@@ -371,56 +392,6 @@ class SoulVideoDrawer : IDrawer {
         OpenGLTools.deleteFBO(fbs, texts)
     }
 
-    private fun getVertexShader(): String {
-        return "attribute vec4 aPosition;" +
-                "precision mediump float;" +
-                "uniform mat4 uMatrix;" +
-                "attribute vec2 aCoordinate;" +
-                "varying vec2 vCoordinate;" +
-                "attribute float alpha;" +
-                "varying float inAlpha;" +
-                "void main() {" +
-                "    gl_Position = uMatrix*aPosition;" +
-                "    vCoordinate = aCoordinate;" +
-                "    inAlpha = alpha;" +
-                "}"
-    }
-
-    private fun getFragmentShader(): String {
-        //一定要加换行"\n"，否则会和下一行的precision混在一起，导致编译出错
-        return "#extension GL_OES_EGL_image_external : require\n" +
-                "precision mediump float;" +
-                "varying vec2 vCoordinate;" +
-                "varying float inAlpha;" +
-                "uniform samplerExternalOES uTexture;" +
-                "uniform float progress;" +
-                "uniform int drawFbo;" +
-                "uniform sampler2D uSoulTexture;" +
-                "void main() {" +
-                    // 透明度[0,0.4]
-                    "float alpha = 0.6 * (1.0 - progress);" +
-                    // 缩放比例[1.0,1.8]
-                    "float scale = 1.0 + (1.5 - 1.0) * progress;" +
-
-                    // 放大纹理坐标
-                    // 根据放大比例，得到放大纹理坐标 [0,0],[0,1],[1,1],[1,0]
-                    "float soulX = 0.5 + (vCoordinate.x - 0.5) / scale;\n" +
-                    "float soulY = 0.5 + (vCoordinate.y - 0.5) / scale;\n" +
-                    "vec2 soulTextureCoords = vec2(soulX, soulY);" +
-                    // 获取对应放大纹理坐标下的纹素(颜色值rgba)
-                    "vec4 soulMask = texture2D(uSoulTexture, soulTextureCoords);" +
-
-                    "vec4 color = texture2D(uTexture, vCoordinate);" +
-
-                    "if (drawFbo == 0) {" +
-                        // 颜色混合 默认颜色混合方程式 = mask * (1.0-alpha) + weakMask * alpha
-                    "    gl_FragColor = color * (1.0 - alpha) + soulMask * alpha;" +
-                    "} else {" +
-                    "   gl_FragColor = vec4(color.r, color.g, color.b, inAlpha);" +
-                    "}" +
-                "}"
-    }
-
     private fun loadShader(type: Int, shaderCode: String): Int {
         //根据type创建顶点着色器或者片元着色器
         val shader = GLES20.glCreateShader(type)
@@ -430,12 +401,36 @@ class SoulVideoDrawer : IDrawer {
 
         return shader
     }
+    private var dx = 0f
+    private var dy = 0f
+
+    private var sx = 1f
+    private var sy = 1f
 
     fun translate(dx: Float, dy: Float) {
-        Matrix.translateM(mMatrix, 0, dx*mWidthRatio*2, -dy*mHeightRatio*2, 0f)
+        this.dx += dx
+        this.dy += dy
+        doTranslate(dx, dy)
     }
 
     fun scale(sx: Float, sy: Float) {
+        this.sx *= sx
+        this.sy *= sy
+        doScale(sx, sy)
+    }
+
+    private fun doMatrix() {
+        doTranslate(dx, dy)
+        doScale(sx, sy)
+    }
+
+    private fun doTranslate(dx: Float, dy: Float) {
+        if (mMatrix == null) return
+        Matrix.translateM(mMatrix, 0, dx * mWidthRatio * 2, -dy * mHeightRatio * 2, 0f)
+    }
+
+    private fun doScale(sx: Float, sy: Float) {
+        if (mMatrix == null) return
         Matrix.scaleM(mMatrix, 0, sx, sy, 1f)
         mWidthRatio /= sx
         mHeightRatio /= sy

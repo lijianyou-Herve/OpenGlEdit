@@ -18,20 +18,23 @@ import com.example.opengledit.opengl.drawer.VideoDrawer
  */
 class TouchSurfaceView : SurfaceView {
 
-    constructor(context: Context): super(context)
+    constructor(context: Context) : super(context)
 
-    constructor(context: Context, attrs: AttributeSet): super(context, attrs)
+    constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
 
     private var mPrePoint = PointF()
 
+    private var mDrawers: MutableList<Lattice4VideoDrawer> = mutableListOf()
     private var mDrawer: Lattice4VideoDrawer? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                mDrawer = mDrawers?.random()
                 mPrePoint.x = event.x
                 mPrePoint.y = event.y
             }
+
             MotionEvent.ACTION_MOVE -> {
                 val dx = (event.x - mPrePoint.x) / width
                 val dy = (event.y - mPrePoint.y) / height
@@ -44,6 +47,6 @@ class TouchSurfaceView : SurfaceView {
     }
 
     fun addDrawer(drawer: Lattice4VideoDrawer) {
-        mDrawer = drawer
+        mDrawers?.add(drawer)
     }
 }
