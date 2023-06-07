@@ -134,9 +134,9 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
     }
 
     private fun initVideo(path: String, index: Int) {
-//        val drawer = VideoDrawer() // SoulVideoDrawer()
+        val drawer = VideoDrawer() // SoulVideoDrawer()
 //        val drawer = SoulVideoDrawer() // SoulVideoDrawer()
-        val drawer = Lattice4VideoDrawer() // SoulVideoDrawer()
+//        val drawer = Lattice4VideoDrawer() // SoulVideoDrawer()
 //        val drawer = FourPartFilter(yxApp) // SoulVideoDrawer()
         drawer.setVideoSize(1920, 1080)
         drawer.getSurfaceTexture {
@@ -148,16 +148,16 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         val dx = -0.25f + 0.5f * (index % 2)
         val dy = -0.25f + 0.5f * (index / 2)
 
-        drawer.scale(sx, sy)
-        drawer.translate(dx, dy)
+//        drawer.scale(sx, sy)
+//        drawer.translate(dx, dy)
         if(index==3){
 //            drawer.translate(-0.1f, 0f)
         }
 //        drawer.setAlpha(0.5f)
 
-        drawer.setIndex(index)
+//        drawer.setIndex(index)
         renderer.addDrawer(drawer)
-        binding.glSurface.addDrawer(drawer)
+//        binding.glSurface.addDrawer(drawer)
 
 
 //        val dx = 0f

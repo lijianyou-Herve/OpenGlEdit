@@ -65,4 +65,9 @@ dependencies {
     implementation 'com.github.ZLYang110:FileSelector:2.1.6'
     // 权限请求框架：https://github.com/getActivity/XXPermissions
     implementation 'com.github.getActivity:XXPermissions:18.0'
+
+    //依赖gpuimage,android
+    implementation 'jp.co.cyberagent.android:gpuimage:2.1.0'
+
+
 }
