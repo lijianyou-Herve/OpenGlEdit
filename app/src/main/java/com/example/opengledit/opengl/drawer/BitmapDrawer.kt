@@ -17,7 +17,7 @@ import java.nio.FloatBuffer
  * @Datetime 2019-10-09 09:08
  *
  */
-class BitmapDrawer(private val mBitmap: Bitmap): IDrawer {
+class BitmapDrawer(private val mBitmap: Bitmap) : IDrawer {
 
     // 顶点坐标
     private val mVertexCoors = floatArrayOf(
@@ -42,8 +42,10 @@ class BitmapDrawer(private val mBitmap: Bitmap): IDrawer {
 
     // 顶点坐标接收者
     private var mVertexPosHandler: Int = -1
+
     // 纹理坐标接收者
     private var mTexturePosHandler: Int = -1
+
     // 纹理接收者
     private var mTextureHandler: Int = -1
 

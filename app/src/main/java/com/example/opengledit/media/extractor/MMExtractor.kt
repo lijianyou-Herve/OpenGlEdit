@@ -107,7 +107,8 @@ class MMExtractor(path: String?) {
      * Seek到指定位置，并返回实际帧的时间戳
      */
     fun seek(pos: Long): Long {
-        mExtractor!!.seekTo(pos, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+        mExtractor!!.seekTo(pos, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+//        mExtractor!!.seekTo(pos, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
         return mExtractor!!.sampleTime
     }
 

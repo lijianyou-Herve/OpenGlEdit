@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
  * @Datetime 2019-09-02 09:43
  *
  */
-abstract class BaseDecoder(private val mFilePath: String): IDecoder {
+abstract class BaseDecoder(private val mFilePath: String) : IDecoder {
 
     private val TAG = "BaseDecoder"
 
@@ -46,16 +46,6 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
      * 音视频数据读取器
      */
     private var mExtractor: IExtractor? = null
-
-    /**
-     * 解码输入缓存区
-     */
-    private var mInputBuffers: Array<ByteBuffer>? = null
-
-    /**
-     * 解码输出缓存区
-     */
-    private var mOutputBuffers: Array<ByteBuffer>? = null
 
     /**
      * 解码数据信息
@@ -98,12 +88,15 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
         //【解码步骤：1. 初始化，并启动解码器】
         if (!init()) return
 
+        seekTo(5 * 1000L)
+
         Log.i(TAG, "开始解码")
         try {
             while (mIsRunning) {
                 if (mState != DecodeState.START &&
                     mState != DecodeState.DECODING &&
-                    mState != DecodeState.SEEKING) {
+                    mState != DecodeState.SEEKING
+                ) {
                     Log.i(TAG, "进入等待：$mState")
 
                     waitDecode()
@@ -114,7 +107,8 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
                 }
 
                 if (!mIsRunning ||
-                    mState == DecodeState.STOP) {
+                    mState == DecodeState.STOP
+                ) {
                     mIsRunning = false
                     break
                 }
@@ -136,14 +130,15 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
                     if (mSyncRender && mState == DecodeState.DECODING) {
                         sleepRender()
                     }
+                    val outputBuffer = mCodec!!.getOutputBuffer(index)!!
                     //【解码步骤：4. 渲染】
                     if (mSyncRender) {// 如果只是用于编码合成新视频，无需渲染
-                        render(mOutputBuffers!![index], mBufferInfo)
+                        render(outputBuffer, mBufferInfo)
                     }
 
                     //将解码数据传递出去
                     val frame = Frame()
-                    frame.buffer = mOutputBuffers!![index]
+                    frame.buffer = outputBuffer
                     frame.setBufferInfo(mBufferInfo)
                     mStateListener?.decodeOneFrame(this, frame)
 
@@ -153,12 +148,23 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
                     if (mState == DecodeState.START) {
                         mState = DecodeState.PAUSE
                     }
+
+                    val curTimeStamp = getCurTimeStamp()
+                    Log.i(TAG, "run: 当前时间 curTimeStamp = $curTimeStamp")
+                    if (curTimeStamp > 0) {
+                        if (curTimeStamp > 1.2 * 1000) {
+                            seekToStart(1 * 1000L)
+                        }
+                    }
+
                 }
+
                 //【解码步骤：6. 判断解码是否完成】
                 if (mBufferInfo.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
                     Log.i(TAG, "解码结束")
-                    mState = DecodeState.FINISH
-                    mStateListener?.decoderFinish(this)
+//                    mState = DecodeState.FINISH
+//                    mStateListener?.decoderFinish(this)
+                    seekToStart(2 * 1000L)
                 }
             }
         } catch (e: Exception) {
@@ -167,6 +173,15 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
             doneDecode()
             release()
         }
+    }
+
+    private fun seekToStart(startTime: Long) {
+        mIsEOS = false
+        mCodec!!.flush()
+        val seekTime = startTime
+        seekTo(seekTime)
+        mStartTimeForSync = System.currentTimeMillis()
+        goOn()
     }
 
     private fun init(): Boolean {
@@ -181,7 +196,8 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
         //初始化数据提取器
         mExtractor = initExtractor(mFilePath)
         if (mExtractor == null ||
-            mExtractor!!.getFormat() == null) {
+            mExtractor!!.getFormat() == null
+        ) {
             Log.w(TAG, "无法解析文件")
             return false
         }
@@ -218,9 +234,6 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
                 waitDecode()
             }
             mCodec!!.start()
-
-            mInputBuffers = mCodec?.inputBuffers
-            mOutputBuffers = mCodec?.outputBuffers
         } catch (e: Exception) {
             return false
         }
@@ -232,17 +245,21 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
         var isEndOfStream = false
 
         if (inputBufferIndex >= 0) {
-            val inputBuffer = mInputBuffers!![inputBufferIndex]
+            val inputBuffer = mCodec!!.getInputBuffer(inputBufferIndex)!!
             val sampleSize = mExtractor!!.readBuffer(inputBuffer)
 
             if (sampleSize < 0) {
                 //如果数据已经取完，压入数据结束标志：MediaCodec.BUFFER_FLAG_END_OF_STREAM
-                mCodec!!.queueInputBuffer(inputBufferIndex, 0, 0,
-                    0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                mCodec!!.queueInputBuffer(
+                    inputBufferIndex, 0, 0,
+                    0, MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                )
                 isEndOfStream = true
             } else {
-                mCodec!!.queueInputBuffer(inputBufferIndex, 0,
-                    sampleSize, mExtractor!!.getCurrentTimestamp(), 0)
+                mCodec!!.queueInputBuffer(
+                    inputBufferIndex, 0,
+                    sampleSize, mExtractor!!.getCurrentTimestamp(), 0
+                )
             }
         }
         return isEndOfStream
@@ -255,8 +272,10 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
             MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {}
             MediaCodec.INFO_TRY_AGAIN_LATER -> {}
             MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED -> {
-                mOutputBuffers = mCodec!!.outputBuffers
+//                mCodec.getOutputBuffer()
+//                mOutputBuffers = mCodec!!.outputBuffers
             }
+
             else -> {
                 return index
             }
@@ -267,10 +286,14 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
     private fun sleepRender() {
         val passTime = System.currentTimeMillis() - mStartTimeForSync
         val curTime = getCurTimeStamp()
+
+        Log.i(TAG, "sleepRender: passTime = $passTime, curTime = $curTime")
+
         if (curTime > passTime) {
             Thread.sleep(curTime - passTime)
         }
     }
+
 
     private fun release() {
         try {
@@ -323,11 +346,11 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
     }
 
     override fun seekTo(pos: Long): Long {
-        return 0
+        return mExtractor!!.seek(pos * 1000)
     }
 
     override fun seekAndPlay(pos: Long): Long {
-        return 0
+        return mExtractor!!.seek(pos * 1000)
     }
 
     override fun stop() {
@@ -420,8 +443,10 @@ abstract class BaseDecoder(private val mFilePath: String): IDecoder {
     /**
      * 渲染
      */
-    abstract fun render(outputBuffer: ByteBuffer,
-                        bufferInfo: MediaCodec.BufferInfo)
+    abstract fun render(
+        outputBuffer: ByteBuffer,
+        bufferInfo: MediaCodec.BufferInfo,
+    )
 
     /**
      * 结束解码

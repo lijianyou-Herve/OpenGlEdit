@@ -6,12 +6,16 @@ import android.util.Log
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import com.example.opengledit.base.BaseActivity
 import com.example.opengledit.databinding.ActivityMainBinding
+import com.example.opengledit.ext.Ext.io
+import com.example.opengledit.ext.Ext.ui
 import com.example.opengledit.media.BaseDecoder
 import com.example.opengledit.media.DefDecoderStateListener
 import com.example.opengledit.media.Frame
 import com.example.opengledit.media.IDecoder
+import com.example.opengledit.media.SimplePlayer
 import com.example.opengledit.media.decoder.AudioDecoder
 import com.example.opengledit.media.decoder.DefDecodeStateListener
 import com.example.opengledit.media.decoder.VideoDecoder
@@ -26,6 +30,8 @@ import com.example.opengledit.opengl.drawer.SoulVideoDrawer
 import com.example.opengledit.opengl.drawer.VideoDrawer
 import com.example.opengledit.opengl.egl.CustomerGLRenderer
 import com.example.opengledit.utils.SPUtils
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -75,7 +81,6 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
             renderer = CustomerGLRenderer()
             old.stop()
             addVideos()
-            initAudio()
             onStartClick()
         }
 
@@ -84,7 +89,6 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         val file = File(path1)
         if (file.exists()) {
             addVideos()
-            initAudio()
             setRenderSurface()
         }
     }
@@ -92,11 +96,10 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
 
     private fun addVideos() {
         initVideo(path1, 0)
-        initVideo(path2, 1)
-        initVideo(path2, 2)
-        initVideo(path2, 3)
+//        initVideo(path2, 1)
+//        initVideo(path2, 2)
+//        initVideo(path2, 3)
     }
-
 
     private var startTime = 0L
 
@@ -107,13 +110,12 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         audioDecoder?.withoutSync()
         videoDecoder?.withoutSync()
 
-        initAudioEncoder()
         initVideoEncoder()
     }
 
     private fun initVideoEncoder() {
         // 视频编码器
-        videoEncoder = VideoEncoder(muxer, 1920, 1080)
+        videoEncoder = VideoEncoder(muxer, 1080, 1080)
 
         renderer.setRenderMode(CustomerGLRenderer.RenderMode.RENDER_WHEN_DIRTY)
         renderer.setSurface(videoEncoder!!.getEncodeSurface()!!, 1920, 1080)
@@ -126,14 +128,8 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
         threadPool.execute(videoEncoder)
     }
 
-    private fun initAudioEncoder() {
-        // 音频编码器
-        audioEncoder = AudioEncoder(muxer)
-        // 启动编码线程
-        threadPool.execute(audioEncoder)
-    }
-
     private fun initVideo(path: String, index: Int) {
+//        val drawer = BitmapDrawer() // SoulVideoDrawer()
         val drawer = VideoDrawer() // SoulVideoDrawer()
 //        val drawer = SoulVideoDrawer() // SoulVideoDrawer()
 //        val drawer = Lattice4VideoDrawer() // SoulVideoDrawer()
@@ -150,14 +146,14 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
 
 //        drawer.scale(sx, sy)
 //        drawer.translate(dx, dy)
-        if(index==3){
+        if (index == 3) {
 //            drawer.translate(-0.1f, 0f)
         }
-//        drawer.setAlpha(0.5f)
+        drawer.setAlpha(0.5f)
 
 //        drawer.setIndex(index)
         renderer.addDrawer(drawer)
-//        binding.glSurface.addDrawer(drawer)
+        binding.glSurface.addDrawer(drawer)
 
 
 //        val dx = 0f
@@ -169,8 +165,14 @@ class MainActivity : BaseActivity(), MMuxer.IMuxerStateListener {
     }
 
     private fun initVideoDecoder(path: String, sf: Surface) {
+
+
+//        val simplePlayer = SimplePlayer(sf,path);
+//        simplePlayer.play()
+//
         val videoDecoder = VideoDecoder(path, null, sf)
-//            .withoutSync()
+            .withoutSync()
+
         videoDecoder!!.setStateListener(object : DefDecodeStateListener {
             override fun decodeOneFrame(decodeJob: BaseDecoder?, frame: Frame) {
                 renderer.notifySwap(frame.bufferInfo.presentationTimeUs)

@@ -6,6 +6,7 @@ import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.example.opengledit.opengl.drawer.IDrawer
 import com.example.opengledit.opengl.drawer.Lattice4VideoDrawer
 import com.example.opengledit.opengl.drawer.VideoDrawer
 
@@ -24,8 +25,8 @@ class TouchSurfaceView : SurfaceView {
 
     private var mPrePoint = PointF()
 
-    private var mDrawers: MutableList<Lattice4VideoDrawer> = mutableListOf()
-    private var mDrawer: Lattice4VideoDrawer? = null
+    private var mDrawers: MutableList<IDrawer> = mutableListOf()
+    private var mDrawer: IDrawer? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
@@ -38,15 +39,23 @@ class TouchSurfaceView : SurfaceView {
             MotionEvent.ACTION_MOVE -> {
                 val dx = (event.x - mPrePoint.x) / width
                 val dy = (event.y - mPrePoint.y) / height
-                mDrawer?.translate(dx, dy)
-                mPrePoint.x = event.x
-                mPrePoint.y = event.y
+                if (mDrawer is VideoDrawer) {
+                    (mDrawer as VideoDrawer)?.translate(dx, dy)
+                    mPrePoint.x = event.x
+                    mPrePoint.y = event.y
+                }
+                if (mDrawer is Lattice4VideoDrawer) {
+                    (mDrawer as Lattice4VideoDrawer)?.translate(dx, dy)
+                    mPrePoint.x = event.x
+                    mPrePoint.y = event.y
+                }
+
             }
         }
         return true
     }
 
-    fun addDrawer(drawer: Lattice4VideoDrawer) {
+    fun addDrawer(drawer: IDrawer) {
         mDrawers?.add(drawer)
     }
 }

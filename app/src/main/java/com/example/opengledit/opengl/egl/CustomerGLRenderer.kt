@@ -257,14 +257,15 @@ class CustomerGLRenderer : SurfaceHolder.Callback {
             val render = if (mRenderMode == RenderMode.RENDER_CONTINUOUSLY) {
                 true
             } else {
-                synchronized(mCurTimestamp) {
-                    if (mCurTimestamp > mLastTimestamp) {
-                        mLastTimestamp = mCurTimestamp
-                        true
-                    } else {
-                        false
-                    }
-                }
+//                synchronized(mCurTimestamp) {
+//                    if (mCurTimestamp > mLastTimestamp) {
+//                        mLastTimestamp = mCurTimestamp
+//                        true
+//                    } else {
+//                        false
+//                    }
+//                }
+                true
             }
 
             if (render) {
